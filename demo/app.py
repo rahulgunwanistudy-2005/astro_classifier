@@ -8,11 +8,23 @@ import time
 import random
 from pathlib import Path
 
+# Monkey-patch gradio_client bug: "argument of type 'bool' is not iterable"
+try:
+    from gradio_client import utils as _gc_utils
+    _orig = _gc_utils.get_type
+    def _patched_get_type(schema):
+        if not isinstance(schema, dict):
+            return "Any"
+        return _orig(schema)
+    _gc_utils.get_type = _patched_get_type
+except Exception:
+    pass
+
 import gradio as gr
 import numpy as np
 from PIL import Image, ImageFilter
 
-# Try to load real model
+# ── Try to load real model 
 DEMO_MODE = True
 
 try:
@@ -34,7 +46,7 @@ except Exception as e:
     print(f"Model load failed ({e}) — running in demo mode")
 
 
-# Class definitions
+# ── Class definitions ─────────────────────────────────────────────────────────
 CLASSES = [
     "disturbed", "merging", "round_smooth", "in_between", "cigar_shaped",
     "barred_spiral", "unbarred_tight_spiral", "unbarred_loose_spiral",
@@ -55,7 +67,7 @@ CLASS_INFO = {
 }
 
 
-# Inference
+# ── Inference 
 def _demo_predict(image: Image.Image) -> dict:
     time.sleep(0.3)
     arr = np.array(image.convert("RGB").resize((128, 128))).astype(float) / 255.0
@@ -161,7 +173,7 @@ def _build_bars(probs, predicted):
     </div>"""
 
 
-# Synthetic example images
+# ── Synthetic example images 
 def _make_example(cls: str) -> Image.Image:
     random.seed(hash(cls) % 999)
     arr = np.zeros((256, 256, 3), dtype=float)
@@ -250,7 +262,7 @@ for cls in CLASSES:
     EXAMPLE_PATHS.append([str(path)])
 
 
-# CSS
+# ── CSS 
 CSS = """
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;600&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap');
 
@@ -499,7 +511,7 @@ FOOTER = """
 """
 
 
-# Gradio UI
+# ── Gradio UI 
 with gr.Blocks(title="AstroClassifier", css=CSS) as demo:
     gr.HTML(HEADER)
 
@@ -547,4 +559,4 @@ with gr.Blocks(title="AstroClassifier", css=CSS) as demo:
     )
 
 if __name__ == "__main__":
-    demo.launch(show_api=False, ssr_mode=False)
+    demo.launch(show_api=False)
