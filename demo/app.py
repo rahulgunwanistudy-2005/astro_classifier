@@ -547,4 +547,4 @@ with gr.Blocks(title="AstroClassifier", css=CSS) as demo:
     )
 
 if __name__ == "__main__":
-    demo.launch(show_api=False)
+    demo.launch(show_api=False, ssr_mode=False)

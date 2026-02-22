@@ -1,5 +1,5 @@
 gradio==5.16.0
-gradio_client==1.5.2
+gradio_client==1.7.0
 torch>=2.5.0
 torchvision>=0.20.0
 numpy
