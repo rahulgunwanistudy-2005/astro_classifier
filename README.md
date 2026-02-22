@@ -1,3 +1,14 @@
+---
+title: AstroClassifier
+emoji: 🔭
+colorFrom: blue
+colorTo: indigo
+sdk: gradio
+sdk_version: 4.44.0
+app_file: demo/app.py
+pinned: false
+---
+
 # AstroClassifier
 
 **Deep learning pipeline for galaxy morphology classification — 10 classes, trained from scratch on Galaxy10 DECals.**
