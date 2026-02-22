@@ -1,0 +1,46 @@
+# =============================================================================
+# Experiment: Focal Loss Run 2 — Higher Gamma, More Epochs
+# Extends base_config.yaml — only overrides are listed here.
+#
+# Changes vs Run 1 (baseline_focal_loss):
+#   - gamma: 2.0 → 3.0  (more aggressive focus on hard/rare classes)
+#   - lr: 0.001 → 0.0005 (lower LR for finer convergence)
+#   - epochs: 50 → 75   (more time to converge)
+#   - batch_size: 128 → 64 (smaller batches = more gradient updates)
+#   - warmup_epochs: 5 → 8
+#
+# Hypothesis: unbarred_loose_spiral F1 was 0.136 in Run 1.
+# Higher gamma forces the model to focus harder on that class.
+# =============================================================================
+
+_base_: "base_config.yaml"
+
+project:
+  experiment_name: "focal_gamma3_run2"
+  device: "mps"
+  num_workers: 0
+  pin_memory: false
+
+loss:
+  name: "focal"
+  focal:
+    gamma: 3.0
+    alpha: null
+
+optimizer:
+  lr: 0.0005
+
+training:
+  epochs: 75
+  batch_size: 64
+  mixed_precision: false
+
+scheduler:
+  name: "cosine_warmup"
+  warmup_epochs: 8
+
+checkpointing:
+  output_dir: "outputs/checkpoints_run2"
+
+logging:
+  wandb_project: "astro-classifier"

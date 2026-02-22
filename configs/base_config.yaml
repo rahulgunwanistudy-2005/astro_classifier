@@ -1,0 +1,159 @@
+# =============================================================================
+# AstroClassifier - Base Configuration
+# =============================================================================
+# All hyperparameters live here. NEVER hardcode values in source files.
+# Override any key by creating an experiment config that extends this one.
+
+project:
+  name: "astro-classifier"
+  experiment_name: "baseline_focal_loss"
+  seed: 42
+  device: "mps"
+  num_workers: 0
+  pin_memory: true
+
+# -----------------------------------------------------------------------------
+# Data
+# -----------------------------------------------------------------------------
+data:
+  root_dir: "data/"
+  train_dir: "data/train"
+  val_dir: "data/val"
+  test_dir: "data/test"
+  image_size: 128
+  num_channels: 3
+  classes:
+    - "disturbed"
+    - "merging"
+    - "round_smooth"
+    - "in_between"
+    - "cigar_shaped"
+    - "barred_spiral"
+    - "unbarred_tight_spiral"
+    - "unbarred_loose_spiral"
+    - "edge_on_no_bulge"
+    - "edge_on_with_bulge"
+  class_weights: null
+
+# -----------------------------------------------------------------------------
+# Augmentation
+# -----------------------------------------------------------------------------
+augmentation:
+  enabled: true
+  train:
+    random_horizontal_flip: 0.5
+    random_vertical_flip: 0.5
+    random_rotation_degrees: 360   # Celestial objects have no canonical orientation
+    random_resized_crop:
+      scale: [0.8, 1.0]
+      ratio: [0.9, 1.1]
+    color_jitter:
+      brightness: 0.2
+      contrast: 0.2
+      saturation: 0.1
+    gaussian_blur:
+      kernel_size: 3
+      sigma: [0.1, 1.0]
+      p: 0.3
+    normalize:
+      mean: [0.485, 0.456, 0.406]   # ImageNet stats (adapt for SDSS if needed)
+      std: [0.229, 0.224, 0.225]
+  val:
+    normalize:
+      mean: [0.485, 0.456, 0.406]
+      std: [0.229, 0.224, 0.225]
+
+# -----------------------------------------------------------------------------
+# Model
+# -----------------------------------------------------------------------------
+model:
+  name: "AstroCNN"          # Must match registry key in model_factory.py
+  num_classes: 10
+  dropout_rate: 0.4
+  channels: [32, 64, 128, 256]    # Feature map sizes per ConvBlock
+  use_batch_norm: true
+  pretrained_backbone: null       # null | "resnet18" | "efficientnet_b0"
+
+# -----------------------------------------------------------------------------
+# Training
+# -----------------------------------------------------------------------------
+training:
+  epochs: 50
+  batch_size: 128
+  accumulation_steps: 1     # Gradient accumulation (effective_batch = batch * accumulation)
+  mixed_precision: true     # torch.cuda.amp — speeds up training on modern GPUs
+  clip_grad_norm: 1.0       # Gradient clipping to prevent exploding gradients
+
+# -----------------------------------------------------------------------------
+# Loss Function
+# -----------------------------------------------------------------------------
+loss:
+  name: "focal"             # "cross_entropy" | "focal" | "label_smoothing_ce"
+  focal:
+    gamma: 2.0              # Focusing parameter — higher = more focus on hard examples
+    alpha: null             # null = use inverse class frequency; or list e.g. [0.1, 0.3, 0.3, 0.3]
+    reduction: "mean"
+  label_smoothing: 0.1      # Used only if name == "label_smoothing_ce"
+
+# -----------------------------------------------------------------------------
+# Optimizer
+# -----------------------------------------------------------------------------
+optimizer:
+  name: "adamw"             # "adam" | "adamw" | "sgd"
+  lr: 0.001
+  weight_decay: 0.01        # L2 regularization — critical with AdamW
+  betas: [0.9, 0.999]       # Adam/AdamW momentum terms
+  # SGD-specific
+  momentum: 0.9
+  nesterov: true
+
+# -----------------------------------------------------------------------------
+# Learning Rate Scheduler
+# -----------------------------------------------------------------------------
+scheduler:
+  name: "cosine_warmup"     # "cosine_warmup" | "step" | "reduce_on_plateau" | "one_cycle"
+  warmup_epochs: 5          # Linear warmup before cosine decay
+  min_lr: 1.0e-6
+  # StepLR-specific
+  step_size: 10
+  gamma: 0.5
+  # ReduceLROnPlateau-specific
+  patience: 5
+  factor: 0.5
+
+# -----------------------------------------------------------------------------
+# Checkpointing
+# -----------------------------------------------------------------------------
+checkpointing:
+  output_dir: "outputs/checkpoints"
+  save_top_k: 3             # Keep top-k checkpoints by validation macro-F1
+  monitor: "val_macro_f1"   # Metric to track for best model selection
+  mode: "max"               # "max" for F1, "min" for loss
+  save_last: true
+
+# -----------------------------------------------------------------------------
+# Logging & Tracking (Weights & Biases)
+# -----------------------------------------------------------------------------
+logging:
+  use_wandb: true
+  wandb_project: "astro-classifier"
+  wandb_entity: null        # Your W&B username/team — set via env var WANDB_ENTITY
+  log_interval: 50          # Log metrics every N batches
+  log_images: true          # Log sample predictions to W&B
+  num_log_images: 16        # Number of sample images per epoch
+
+# -----------------------------------------------------------------------------
+# Evaluation
+# -----------------------------------------------------------------------------
+evaluation:
+  metrics:
+    - "accuracy"
+    - "macro_f1"
+    - "per_class_f1"
+    - "per_class_precision"
+    - "per_class_recall"
+    - "roc_auc"
+    - "confusion_matrix"
+  # Class of interest for recall optimization (rare event)
+  rare_class: "cigar_shaped"
+  confidence_threshold: 0.5
