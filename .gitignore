@@ -68,3 +68,7 @@ htmlcov/
 
 # ── Demo generated files ──────────────────────────────────────────────────────
 demo/examples/
+
+# Allow real model weights
+!model/
+!model/best_model.pth
