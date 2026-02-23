@@ -504,7 +504,7 @@ FOOTER = """
 <div class="app-footer">
     <p>AstroClassifier &nbsp;&middot;&nbsp; PyTorch &middot; Focal Loss &middot; WeightedRandomSampler</p>
     <p>
-        <a href="https://github.com/YOUR_USERNAME/astro-classifier" target="_blank">GitHub</a>
+        <a href="https://github.com/rahulgunwanistudy-2005/astro-classifier" target="_blank">GitHub</a>
         &nbsp;&nbsp;
         <a href="https://zenodo.org/records/10845026" target="_blank">Dataset</a>
     </p>

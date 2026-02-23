@@ -137,7 +137,7 @@ checkpointing:
 logging:
   use_wandb: true
   wandb_project: "astro-classifier"
-  wandb_entity: null        # Your W&B username/team — set via env var WANDB_ENTITY
+  wandb_entity: null        
   log_interval: 50          # Log metrics every N batches
   log_images: true          # Log sample predictions to W&B
   num_log_images: 16        # Number of sample images per epoch

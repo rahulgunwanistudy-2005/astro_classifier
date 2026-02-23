@@ -183,7 +183,7 @@ astro-classifier/
 
 ```bash
 # 1. Clone and install
-git clone https://github.com/YOUR_USERNAME/astro-classifier.git
+git clone https://github.com/rahulgunwanistudy-2005/astro-classifier.git
 cd astro-classifier
 python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
