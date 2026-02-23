@@ -31,16 +31,31 @@ DEMO_MODE = True
 try:
     import torch
     import torch.nn.functional as F
-    CHECKPOINT_PATH = Path("model/best_model.pth")
-    if CHECKPOINT_PATH.exists():
-        sys.path.insert(0, str(Path(__file__).parent.parent))
+
+    # Check multiple possible locations for the checkpoint
+    _here = Path(__file__).parent
+    _candidates = [
+        _here.parent / "model" / "best_model.pth",   # repo root /model/
+        _here / "model" / "best_model.pth",           # demo/model/
+        Path("/home/user/app/model/best_model.pth"),  # HF Spaces absolute
+        Path("model/best_model.pth"),                  # relative fallback
+    ]
+    CHECKPOINT_PATH = None
+    for _p in _candidates:
+        print(f"Checking: {_p} — exists: {_p.exists()}")
+        if _p.exists():
+            CHECKPOINT_PATH = _p
+            break
+
+    if CHECKPOINT_PATH is not None:
+        sys.path.insert(0, str(_here.parent))
         from src.models.astro_cnn import AstroCNN
         model = AstroCNN(num_classes=10, channels=[32, 64, 128, 256], dropout_rate=0.0)
         ckpt = torch.load(CHECKPOINT_PATH, map_location="cpu", weights_only=False)
         model.load_state_dict(ckpt["model_state_dict"])
         model.eval()
         DEMO_MODE = False
-        print("Real model loaded — Run 2 (gamma=3.0, Macro F1=0.607)")
+        print(f"Real model loaded from {CHECKPOINT_PATH} — Run 2 (gamma=3.0, Macro F1=0.607)")
     else:
         print("No checkpoint found — running in demo mode")
 except Exception as e:
@@ -110,18 +125,24 @@ def _real_predict(image: Image.Image) -> dict:
 
 
 def classify(image):
-    if image is None:
-        return "", "", ""
+    try:
+        if image is None:
+            return "", "", ""
 
-    if isinstance(image, np.ndarray):
-        image = Image.fromarray(image)
+        # Gradio 5 may pass image as dict
+        if isinstance(image, dict):
+            image = image.get("composite") or image.get("background") or list(image.values())[0]
+        if isinstance(image, str):
+            image = Image.open(image)
+        if isinstance(image, np.ndarray):
+            image = Image.fromarray(image)
 
-    probs     = _demo_predict(image) if DEMO_MODE else _real_predict(image)
-    predicted = max(probs, key=probs.get)
-    confidence = probs[predicted]
-    info      = CLASS_INFO[predicted]
+        probs      = _demo_predict(image) if DEMO_MODE else _real_predict(image)
+        predicted  = max(probs, key=probs.get)
+        confidence = probs[predicted]
+        info       = CLASS_INFO[predicted]
 
-    result = f"""### {info['label'].upper()}
+        result = f"""### {info['label'].upper()}
 
 **{confidence*100:.1f}% confidence**
 
@@ -130,10 +151,14 @@ def classify(image):
 ---
 *{info['fact']}*
 """
+        bars_html = _build_bars(probs, predicted)
+        mode = "Pipeline simulation — upload model/best_model.pth for real inference" if DEMO_MODE else "Run 2 — gamma=3.0 — Macro F1: 0.607 — Macro AUC: 0.935"
+        return result, bars_html, mode
 
-    bars_html = _build_bars(probs, predicted)
-    mode = "Pipeline simulation — upload model/best_model.pth for real inference" if DEMO_MODE else "Run 2 — gamma=3.0 — Macro F1: 0.607 — Macro AUC: 0.935"
-    return result, bars_html, mode
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return f"Error: {e}", "", "Error during classification"
 
 
 def _build_bars(probs, predicted):
@@ -286,7 +311,6 @@ body, .gradio-container {
     font-family: var(--body) !important;
 }
 
-/* Header */
 .app-header {
     padding: 56px 0 40px;
     border-bottom: 1px solid var(--border);
@@ -320,7 +344,6 @@ body, .gradio-container {
     margin: 0 0 32px;
 }
 
-/* Stats bar */
 .stats-bar {
     display: flex;
     gap: 0;
@@ -352,23 +375,6 @@ body, .gradio-container {
     margin-top: 2px;
 }
 
-/* Panels */
-.panel {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 24px;
-}
-.panel-label {
-    font-family: var(--mono);
-    font-size: 9px;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 16px;
-}
-
-/* Classify button */
 .classify-btn button {
     background: var(--accent) !important;
     border: none !important;
@@ -383,11 +389,8 @@ body, .gradio-container {
     width: 100% !important;
     transition: background 0.2s !important;
 }
-.classify-btn button:hover {
-    background: #2563eb !important;
-}
+.classify-btn button:hover { background: #2563eb !important; }
 
-/* Result markdown */
 .result-box {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -413,7 +416,6 @@ body, .gradio-container {
 .result-box em { color: var(--muted) !important; font-size: 13px !important; font-style: normal !important; }
 .result-box hr { border-color: var(--border) !important; margin: 16px 0 !important; }
 
-/* Mode bar */
 .mode-bar {
     font-family: var(--mono) !important;
     font-size: 10px !important;
@@ -424,17 +426,12 @@ body, .gradio-container {
     padding: 0 !important;
 }
 
-/* Image upload */
 .image-upload {
     border: 1px solid var(--border) !important;
     border-radius: 8px !important;
     background: var(--surface) !important;
 }
 
-/* Examples */
-.gr-examples { margin-top: 16px !important; }
-
-/* Footer */
 .app-footer {
     border-top: 1px solid var(--border);
     margin-top: 48px;
@@ -452,11 +449,7 @@ body, .gradio-container {
 }
 .app-footer a { color: var(--accent); text-decoration: none; }
 
-/* Hide gradio default footer */
 footer { display: none !important; }
-.gr-prose h3 { font-family: var(--display) !important; }
-
-/* Textbox mode indicator */
 textarea, input[type=text] {
     background: transparent !important;
     border: none !important;
@@ -476,26 +469,11 @@ HEADER = """
         across 10 structural categories. Custom architecture &middot; Focal Loss &middot; 17,736 images.
     </p>
     <div class="stats-bar">
-        <div class="stat-item">
-            <span class="stat-value">0.607</span>
-            <span class="stat-label">Macro F1</span>
-        </div>
-        <div class="stat-item">
-            <span class="stat-value">0.935</span>
-            <span class="stat-label">Macro AUC</span>
-        </div>
-        <div class="stat-item">
-            <span class="stat-value">64.3%</span>
-            <span class="stat-label">Accuracy</span>
-        </div>
-        <div class="stat-item">
-            <span class="stat-value">0.42M</span>
-            <span class="stat-label">Parameters</span>
-        </div>
-        <div class="stat-item">
-            <span class="stat-value">10</span>
-            <span class="stat-label">Classes</span>
-        </div>
+        <div class="stat-item"><span class="stat-value">0.607</span><span class="stat-label">Macro F1</span></div>
+        <div class="stat-item"><span class="stat-value">0.935</span><span class="stat-label">Macro AUC</span></div>
+        <div class="stat-item"><span class="stat-value">64.3%</span><span class="stat-label">Accuracy</span></div>
+        <div class="stat-item"><span class="stat-value">0.42M</span><span class="stat-label">Parameters</span></div>
+        <div class="stat-item"><span class="stat-value">10</span><span class="stat-label">Classes</span></div>
     </div>
 </div>
 """
@@ -504,7 +482,7 @@ FOOTER = """
 <div class="app-footer">
     <p>AstroClassifier &nbsp;&middot;&nbsp; PyTorch &middot; Focal Loss &middot; WeightedRandomSampler</p>
     <p>
-        <a href="https://github.com/rahulgunwanistudy-2005/astro-classifier" target="_blank">GitHub</a>
+        <a href="https://github.com/Rahul270305/astro-classifier" target="_blank">GitHub</a>
         &nbsp;&nbsp;
         <a href="https://zenodo.org/records/10845026" target="_blank">Dataset</a>
     </p>
@@ -548,16 +526,8 @@ with gr.Blocks(title="AstroClassifier", css=CSS) as demo:
 
     gr.HTML(FOOTER)
 
-    classify_btn.click(
-        fn=classify,
-        inputs=[image_input],
-        outputs=[result_md, bars_html, status_txt]
-    )
-    image_input.change(
-        fn=classify,
-        inputs=[image_input],
-        outputs=[result_md, bars_html, status_txt]
-    )
+    classify_btn.click(fn=classify, inputs=[image_input], outputs=[result_md, bars_html, status_txt])
+    image_input.change(fn=classify, inputs=[image_input], outputs=[result_md, bars_html, status_txt])
 
 if __name__ == "__main__":
     demo.launch(show_api=False)
