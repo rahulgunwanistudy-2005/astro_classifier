@@ -8,15 +8,16 @@ import time
 import random
 from pathlib import Path
 
-# Monkey-patch gradio_client bug: "argument of type 'bool' is not iterable"
+# Monkey-patch gradio_client APIInfoParseError bug (schema can be bool)
 try:
     from gradio_client import utils as _gc_utils
-    _orig = _gc_utils.get_type
-    def _patched_get_type(schema):
-        if not isinstance(schema, dict):
+    _orig_json_schema = _gc_utils.json_schema_to_python_type
+    def _safe_json_schema(schema, defs=None):
+        try:
+            return _orig_json_schema(schema, defs)
+        except Exception:
             return "Any"
-        return _orig(schema)
-    _gc_utils.get_type = _patched_get_type
+    _gc_utils.json_schema_to_python_type = _safe_json_schema
 except Exception:
     pass
 
@@ -24,7 +25,7 @@ import gradio as gr
 import numpy as np
 from PIL import Image, ImageFilter
 
-# ── Try to load real model 
+# ── Try to load real model ────────────────────────────────────────────────────
 DEMO_MODE = True
 
 try:
@@ -67,7 +68,7 @@ CLASS_INFO = {
 }
 
 
-# ── Inference 
+# ── Inference ─────────────────────────────────────────────────────────────────
 def _demo_predict(image: Image.Image) -> dict:
     time.sleep(0.3)
     arr = np.array(image.convert("RGB").resize((128, 128))).astype(float) / 255.0
@@ -173,7 +174,7 @@ def _build_bars(probs, predicted):
     </div>"""
 
 
-# ── Synthetic example images 
+# ── Synthetic example images ──────────────────────────────────────────────────
 def _make_example(cls: str) -> Image.Image:
     random.seed(hash(cls) % 999)
     arr = np.zeros((256, 256, 3), dtype=float)
@@ -262,7 +263,7 @@ for cls in CLASSES:
     EXAMPLE_PATHS.append([str(path)])
 
 
-# ── CSS 
+# ── CSS ───────────────────────────────────────────────────────────────────────
 CSS = """
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;600&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap');
 
@@ -511,7 +512,7 @@ FOOTER = """
 """
 
 
-# ── Gradio UI 
+# ── Gradio UI ─────────────────────────────────────────────────────────────────
 with gr.Blocks(title="AstroClassifier", css=CSS) as demo:
     gr.HTML(HEADER)
 
