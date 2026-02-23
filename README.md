@@ -1,14 +1,3 @@
----
-title: AstroClassifier
-emoji: 🔭
-colorFrom: blue
-colorTo: indigo
-sdk: gradio
-sdk_version: 5.16.0
-app_file: demo/app.py
-pinned: false
----
-
 # AstroClassifier
 
 **Deep learning pipeline for galaxy morphology classification — 10 classes, trained from scratch on Galaxy10 DECals.**
@@ -16,13 +5,13 @@ pinned: false
 [![Python](https://img.shields.io/badge/Python-3.13-blue?logo=python)](https://python.org)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0-ee4c2c?logo=pytorch)](https://pytorch.org)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![HuggingFace](https://img.shields.io/badge/Demo-HuggingFace%20Spaces-yellow?logo=huggingface)](https://huggingface.co/spaces/YOUR_USERNAME/astro-classifier)
+[![HuggingFace](https://img.shields.io/badge/Demo-HuggingFace%20Spaces-yellow?logo=huggingface)](https://huggingface.co/spaces/Rahu-l/astro-classifier)
 
 ---
 
 ## Live Demo
 
-**[→ Try it on Hugging Face Spaces]()**
+**[Try it on Hugging Face Spaces](https://huggingface.co/spaces/Rahu-l/astro-classifier)**
 
 Upload any galaxy image and get instant morphology classification with per-class confidence scores.
 
@@ -183,7 +172,7 @@ astro-classifier/
 
 ```bash
 # 1. Clone and install
-git clone https://github.com/rahulgunwanistudy-2005/astro-classifier.git
+git clone https://github.com/Rahul270305/astro-classifier.git
 cd astro-classifier
 python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
